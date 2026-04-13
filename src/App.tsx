@@ -1,67 +1,89 @@
+// App.tsx
+// Головний потік виконує мінімум роботи в гарячому шляху:
+//
+// DOM режим:   dataGenerator → [binary copy ~0.5ms] → dataBuffer (ref) → DomRenderer RAF
+// WebGL режим: dataGenerator → [binary copy ~0.5ms] → webglWorkerBridge → [transfer ~0ms] → webgl.worker RAF
+//
+// Жодних Zustand setPoints, жодних React ре-рендерів при кожному кадрі.
+
 import { useEffect, useRef } from 'react'
-import { DomPanel } from './components/DomPanel'
-import { WebGLPanel } from './components/WebGLPanel'
-import { MetricsOverlay } from './components/MetricsOverlay'
-import { Controls } from './components/Controls'
-import { useBenchmarkStore } from './store/benchmarkStore'
-import type { DataPoint } from './workers/dataGenerator.worker'
+import { RenderPanel }        from './components/RenderPanel'
+import { MetricsOverlay }     from './components/MetricsOverlay'
+import { Controls }           from './components/Controls'
+import { useBenchmarkStore }  from './store/benchmarkStore'
+import { dataBuffer }         from './store/dataBuffer'
+import { webglWorkerBridge }  from './workers/webglWorkerBridge'
 
 export default function App() {
-  const workerRef    = useRef<Worker | null>(null)
-  const isRunningRef = useRef(false)
+  const genWorkerRef  = useRef<Worker | null>(null)
+  const isRunningRef  = useRef(false)
+  const renderModeRef = useRef<'dom' | 'webgl'>('dom')
+  const scenarioRef   = useRef<string>('bigdata')
 
-  const setPoints  = useBenchmarkStore((s) => s.setPoints)
   const setRunning = useBenchmarkStore((s) => s.setRunning)
   const nodeCount  = useBenchmarkStore((s) => s.nodeCount)
 
-  // Синхронізуємо isRunning ref зі store
+  // Синхронізуємо refs зі store (не хочемо closure-stale в onmessage)
   useEffect(() => {
     return useBenchmarkStore.subscribe((state) => {
-      isRunningRef.current = state.isRunning
+      isRunningRef.current  = state.isRunning
+      renderModeRef.current = state.renderMode
+      scenarioRef.current   = state.scenario
     })
   }, [])
 
-  // Data generator Worker (головний потік отримує дані і роздає панелям)
+  // Дата-генератор Worker
   useEffect(() => {
-    workerRef.current = new Worker(
+    genWorkerRef.current = new Worker(
         new URL('./workers/dataGenerator.worker.ts', import.meta.url),
         { type: 'module' }
     )
 
-    workerRef.current.onmessage = (e: MessageEvent) => {
+    genWorkerRef.current.onmessage = (e: MessageEvent) => {
       if (e.data.type !== 'FRAME') return
       if (!isRunningRef.current) return
 
-      const points = e.data.payload as DataPoint[]
+      // e.data.buf — Float32Array (бінарна копія від dataGenerator, ~0.5мс)
+      const buf: Float32Array = e.data.buf
+      const count: number     = e.data.count
+      const scenario          = scenarioRef.current
 
-      // Оновлюємо store — звідси:
-      // 1. DomPanel підписується через useBenchmarkStore (головний потік)
-      // 2. WebGLPanel підписується через useBenchmarkStore.subscribe і
-      //    пробрасує дані у свій Worker через postMessage
-      setPoints(points)
+      if (renderModeRef.current === 'webgl') {
+        // Transfer до WebGL Worker: zero-copy (~0мс), головний потік більше не має buf
+        webglWorkerBridge.update(buf, count, scenario)
+      } else {
+        // DOM режим: просто зберігаємо ref, DomRenderer прочитає в RAF
+        dataBuffer.buf     = buf
+        dataBuffer.count   = count
+        dataBuffer.version++
+      }
+      // Ніяких setPoints, ніяких React ре-рендерів — лише ~0.5мс на routing
     }
 
-    return () => {
-      workerRef.current?.terminate()
-    }
-  }, [setPoints])
+    return () => { genWorkerRef.current?.terminate() }
+  }, [])
 
+  // Передаємо nodeCount у worker
   useEffect(() => {
-    workerRef.current?.postMessage({ type: 'SET_COUNT', payload: nodeCount })
+    genWorkerRef.current?.postMessage({ type: 'SET_COUNT', payload: nodeCount })
   }, [nodeCount])
 
   const handleStart = () => {
     isRunningRef.current = true
     setRunning(true)
-    workerRef.current?.postMessage({ type: 'SET_COUNT', payload: nodeCount })
-    workerRef.current?.postMessage({ type: 'START' })
+    genWorkerRef.current?.postMessage({ type: 'SET_COUNT', payload: nodeCount })
+    genWorkerRef.current?.postMessage({ type: 'START' })
   }
 
   const handleStop = () => {
     isRunningRef.current = false
     setRunning(false)
-    workerRef.current?.postMessage({ type: 'STOP' })
-    setPoints([])
+    genWorkerRef.current?.postMessage({ type: 'STOP' })
+    // Очищаємо обидва канали
+    dataBuffer.buf   = null
+    dataBuffer.count = 0
+    dataBuffer.version++
+    webglWorkerBridge.clear()
   }
 
   return (
@@ -71,21 +93,15 @@ export default function App() {
           <h1 className="text-sm font-semibold tracking-wide">
             Web Rendering Benchmarking Suite
           </h1>
-          <span className="text-xs text-white/30 font-mono ml-2">
-          DOM vs WebGL · Дипломна робота 2025
+          <span className="text-xs text-white/25 font-mono ml-2">
+          Дослідження ефективності алгоритмів рендерингу вебконтенту · 2025
         </span>
         </header>
 
         <Controls onStart={handleStart} onStop={handleStop} />
 
-        <main className="flex flex-1 overflow-hidden relative min-h-0">
-          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/10 z-10 pointer-events-none" />
-          <div className="w-1/2 h-full">
-            <DomPanel />
-          </div>
-          <div className="w-1/2 h-full">
-            <WebGLPanel />
-          </div>
+        <main className="flex-1 relative min-h-0">
+          <RenderPanel />
           <MetricsOverlay />
         </main>
       </div>
