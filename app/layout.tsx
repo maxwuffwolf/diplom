@@ -12,8 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <script
           dangerouslySetInnerHTML={{
-            __html:
-              "window.__BENCHMARK_HYDRATION_START__ = window.__BENCHMARK_HYDRATION_START__ || performance.now();",
+            __html: 'window.benchmarkHydrationStart = window.benchmarkHydrationStart || performance.now();',
           }}
         />
         {children}

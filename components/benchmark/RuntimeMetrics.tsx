@@ -61,7 +61,7 @@ export function RuntimeMetrics({
 
   useEffect(() => {
     const hydrationStart =
-      (window as Window & { __BENCHMARK_HYDRATION_START__?: number }).__BENCHMARK_HYDRATION_START__ ?? 0
+      (window as Window & { benchmarkHydrationStart?: number }).benchmarkHydrationStart ?? 0
     hydrationMsRef.current = Math.max(0, performance.now() - hydrationStart)
 
     const lcpObserver = new PerformanceObserver((entries) => {

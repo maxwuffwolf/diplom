@@ -25,7 +25,7 @@ const SEGMENTS: BenchmarkItem['segment'][] = ['alpha', 'beta', 'gamma']
 
 /**
  * Simulated API delay used to normalize comparisons across modes.
- * 120ms approximates a moderate real-world roundtrip (e.g. non-local network),
+ * 120ms approximates a moderate real-world roundtrip on fast 3G/4G-like latency,
  * so SSR/CSR timing differences are visible in controlled runs.
  */
 export const SIMULATED_API_DELAY_MS = 120
@@ -70,6 +70,7 @@ export async function wait(ms: number) {
 }
 
 export function percentile(values: number[], percentileValue: number) {
+  // Returns 0 for empty inputs to keep aggregation numeric in summary tables.
   if (!values.length) return 0
   const sorted = [...values].sort((a, b) => a - b)
   const index = Math.min(
