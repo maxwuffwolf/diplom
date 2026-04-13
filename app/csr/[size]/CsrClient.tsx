@@ -19,7 +19,8 @@ export function CsrClient({
 
   useEffect(() => {
     let active = true
-    fetch(`/api/benchmark?size=${size}`, { cache: 'no-store' })
+    const params = new URLSearchParams({ size })
+    fetch(`/api/benchmark?${params.toString()}`, { cache: 'no-store' })
       .then((response) => response.json())
       .then((data: ScenarioPayload) => {
         if (active) setPayload(data)

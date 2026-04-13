@@ -22,6 +22,7 @@ type RunResult = {
 
 const MODES: RunMode[] = ['all', 'csr', 'ssr', 'ssg']
 const SIZES: PayloadSize[] = ['small', 'medium', 'large']
+const BENCHMARK_TIMEOUT_MS = 30000
 
 function download(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type })
@@ -83,7 +84,7 @@ export function BenchmarkControl() {
       const timeoutId = window.setTimeout(() => {
         window.removeEventListener('message', onMessage)
         reject(new Error(`Timeout on ${entryMode} run ${index + 1}`))
-      }, 30000)
+      }, BENCHMARK_TIMEOUT_MS)
 
       function onMessage(event: MessageEvent) {
         if (event.origin !== window.location.origin) return

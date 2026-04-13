@@ -2,7 +2,12 @@ import { notFound } from 'next/navigation'
 import { DatasetView } from '@/components/benchmark/DatasetView'
 import { RuntimeMetrics } from '@/components/benchmark/RuntimeMetrics'
 import { ScenarioNav } from '@/components/benchmark/ScenarioNav'
-import { generateDataset, wait, type PayloadSize } from '@/lib/benchmark'
+import {
+  generateDataset,
+  SIMULATED_NETWORK_DELAY_MS,
+  wait,
+  type PayloadSize,
+} from '@/lib/benchmark'
 
 const SIZES: PayloadSize[] = ['small', 'medium', 'large']
 
@@ -18,7 +23,7 @@ export default async function SsrPage({
   const { size } = await params
   if (!SIZES.includes(size as PayloadSize)) notFound()
 
-  await wait(120)
+  await wait(SIMULATED_NETWORK_DELAY_MS)
   const payload = generateDataset(size as PayloadSize)
   const query = await searchParams
 

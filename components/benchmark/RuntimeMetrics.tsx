@@ -67,8 +67,8 @@ export function RuntimeMetrics({
     })
     const clsObserver = new PerformanceObserver((entries) => {
       for (const entry of entries.getEntries()) {
-        const shift = entry as PerformanceEntry & { value?: number; hadRecentInput?: boolean }
-        if (!shift.hadRecentInput) clsRef.current += shift.value ?? 0
+        const layoutShift = entry as PerformanceEntry & { value?: number; hadRecentInput?: boolean }
+        if (!layoutShift.hadRecentInput) clsRef.current += layoutShift.value ?? 0
       }
     })
 

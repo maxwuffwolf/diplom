@@ -23,6 +23,12 @@ export const PAYLOAD_COUNTS: Record<PayloadSize, number> = {
 
 const SEGMENTS: BenchmarkItem['segment'][] = ['alpha', 'beta', 'gamma']
 
+export const SIMULATED_NETWORK_DELAY_MS = 120
+
+/**
+ * Deterministic pseudo-random generator (LCG) used to keep datasets reproducible
+ * across CSR/SSR/SSG runs for fair benchmark comparisons.
+ */
 function seeded(seed: number) {
   let state = seed % 2147483647
   if (state <= 0) state += 2147483646
