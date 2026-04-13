@@ -1,73 +1,74 @@
-# React + TypeScript + Vite
+# SSR / CSR / SSG Benchmark Layout
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Проєкт реалізовано на **Next.js** для порівняння трьох підходів в одному кодовому базисі:
 
-Currently, two official plugins are available:
+- `/csr` — клієнтське завантаження даних після mount
+- `/ssr` — серверний рендер на кожен запит
+- `/ssg` — статична генерація під час build
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Швидкий старт
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Відкрити:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `http://localhost:3000/benchmark` — Benchmark Control
+- `http://localhost:3000/csr/small`
+- `http://localhost:3000/ssr/small`
+- `http://localhost:3000/ssg/small`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Що уніфіковано для чесного порівняння
+
+- Один і той самий generator dataset (`lib/benchmark.ts`)
+- Один і той самий компонент візуалізації (`components/benchmark/DatasetView.tsx`)
+- Однакова структура DOM і UI для всіх трьох сторінок
+- Різниця тільки у способі отримання/рендеру даних
+
+## Payload режими
+
+- `small`
+- `medium`
+- `large`
+
+Для SSR/CSR/SSG доступні однакові payload маршрути: `/{mode}/{size}`.
+
+## Метрики (overlay + лог)
+
+На сторінках сценаріїв збираються:
+
+- TTFB
+- FCP
+- LCP
+- TTI (approx)
+- CLS
+- Hydration time
+- JS bundle size (resource timing)
+- API requests
+
+Метрики показуються в overlay і записуються у `localStorage` (`benchmark.logs`).
+
+## Benchmark Control
+
+Сторінка `/benchmark` дозволяє:
+
+- обрати підхід (`all`, `csr`, `ssr`, `ssg`)
+- обрати payload (`small`, `medium`, `large`)
+- запустити серію 5–10 прогонів
+- отримати медіану та P90
+- експортувати результати в JSON/CSV
+
+## Рекомендований стенд для стабільності
+
+- фіксована машина/браузер
+- без сторонніх фонових задач
+- 5–10 прогонів на сценарій
+- оцінювати медіану та percentile, а не одиничний замір
+
+## Обмеження експерименту
+
+- TTI є наближенням на базі browser idle/event timing
+- JS bundle size залежить від кешу/режиму (dev/prod)
+- API request count у browser не включає внутрішні серверні виклики
