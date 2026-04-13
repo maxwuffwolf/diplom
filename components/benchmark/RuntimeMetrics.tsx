@@ -40,6 +40,11 @@ function round(value: number) {
   return Number(value.toFixed(2))
 }
 
+function estimateTti(fcp: number, lastLongTaskEnd: number) {
+  if (!fcp) return 0
+  return round(Math.max(fcp, lastLongTaskEnd) + 5000)
+}
+
 export function RuntimeMetrics({
   mode,
   size,
@@ -55,11 +60,14 @@ export function RuntimeMetrics({
   const [ready, setReady] = useState(false)
   const lcpRef = useRef(0)
   const clsRef = useRef(0)
+  const lastLongTaskEndRef = useRef(0)
   const sentRef = useRef(false)
-  const hydrationMarkRef = useRef(0)
+  const hydrationMsRef = useRef(0)
 
   useEffect(() => {
-    hydrationMarkRef.current = performance.now()
+    const hydrationStart =
+      (window as Window & { __BENCHMARK_HYDRATION_START__?: number }).__BENCHMARK_HYDRATION_START__ ?? 0
+    hydrationMsRef.current = Math.max(0, performance.now() - hydrationStart)
 
     const lcpObserver = new PerformanceObserver((entries) => {
       const entry = entries.getEntries().at(-1)
@@ -71,10 +79,16 @@ export function RuntimeMetrics({
         if (!layoutShift.hadRecentInput) clsRef.current += layoutShift.value ?? 0
       }
     })
+    const longTaskObserver = new PerformanceObserver((entries) => {
+      for (const entry of entries.getEntries()) {
+        lastLongTaskEndRef.current = Math.max(lastLongTaskEndRef.current, entry.startTime + entry.duration)
+      }
+    })
 
     try {
       lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true })
       clsObserver.observe({ type: 'layout-shift', buffered: true })
+      longTaskObserver.observe({ type: 'longtask', buffered: true })
     } catch {
       // unsupported browsers
     }
@@ -103,9 +117,9 @@ export function RuntimeMetrics({
         ttfb: round(nav ? nav.responseStart - nav.requestStart : 0),
         fcp: round(fcp),
         lcp: round(lcpRef.current),
-        tti: round(performance.now()),
+        tti: estimateTti(fcp, lastLongTaskEndRef.current),
         cls: round(clsRef.current),
-        hydration: round(hydrationMarkRef.current),
+        hydration: round(hydrationMsRef.current),
         jsBundleKb: round(jsBundleBytes / 1024),
         apiRequests,
       }
@@ -153,6 +167,7 @@ export function RuntimeMetrics({
     return () => {
       lcpObserver.disconnect()
       clsObserver.disconnect()
+      longTaskObserver.disconnect()
       window.removeEventListener('load', onLoad)
     }
   }, [autoReport, mode, run, size])

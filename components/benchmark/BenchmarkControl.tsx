@@ -22,6 +22,8 @@ type RunResult = {
 
 const MODES: RunMode[] = ['all', 'csr', 'ssr', 'ssg']
 const SIZES: PayloadSize[] = ['small', 'medium', 'large']
+const MIN_RUNS = 5
+const MAX_RUNS = 10
 const BENCHMARK_TIMEOUT_MS = 30000
 
 function download(filename: string, content: string, type: string) {
@@ -65,7 +67,7 @@ function summarize(results: RunResult[]) {
 export function BenchmarkControl() {
   const [mode, setMode] = useState<RunMode>('all')
   const [size, setSize] = useState<PayloadSize>('small')
-  const [runs, setRuns] = useState(5)
+  const [runs, setRuns] = useState(MIN_RUNS)
   const [isRunning, setIsRunning] = useState(false)
   const [status, setStatus] = useState('Idle')
   const [currentSrc, setCurrentSrc] = useState('')
@@ -90,7 +92,15 @@ export function BenchmarkControl() {
         if (event.origin !== window.location.origin) return
         if (!event.data || event.data.type !== 'benchmark-result') return
         const payload = event.data.payload as RunResult
-        if (payload.mode !== entryMode || payload.size !== size || payload.run !== String(index + 1)) return
+        if (payload.mode !== entryMode || payload.size !== size || payload.run !== String(index + 1)) {
+          console.warn('Ignoring mismatched benchmark payload', {
+            expectedMode: entryMode,
+            expectedSize: size,
+            expectedRun: String(index + 1),
+            payload,
+          })
+          return
+        }
 
         window.clearTimeout(timeoutId)
         window.removeEventListener('message', onMessage)
@@ -162,10 +172,12 @@ export function BenchmarkControl() {
         <input
           id="runs"
           type="number"
-          min={5}
-          max={10}
+          min={MIN_RUNS}
+          max={MAX_RUNS}
           value={runs}
-          onChange={(event) => setRuns(Math.max(5, Math.min(10, Number(event.target.value) || 5)))}
+          onChange={(event) =>
+            setRuns(Math.max(MIN_RUNS, Math.min(MAX_RUNS, Number(event.target.value) || MIN_RUNS)))
+          }
           disabled={isRunning}
         />
 

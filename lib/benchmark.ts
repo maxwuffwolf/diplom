@@ -23,6 +23,11 @@ export const PAYLOAD_COUNTS: Record<PayloadSize, number> = {
 
 const SEGMENTS: BenchmarkItem['segment'][] = ['alpha', 'beta', 'gamma']
 
+/**
+ * Simulated backend/network delay used to normalize comparisons across modes.
+ * 120ms approximates a moderate real-world roundtrip (e.g. non-local network),
+ * so SSR/CSR timing differences are visible in controlled runs.
+ */
 export const SIMULATED_NETWORK_DELAY_MS = 120
 
 /**
