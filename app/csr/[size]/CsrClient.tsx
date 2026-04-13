@@ -33,7 +33,10 @@ export function CsrClient({
       })
       .catch((caughtError: unknown) => {
         if (!active) return
-        const message = caughtError instanceof Error ? caughtError.message : 'Unknown network error'
+        const message =
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'Failed to fetch benchmark data: Unknown error'
         setError(message)
       })
     return () => {

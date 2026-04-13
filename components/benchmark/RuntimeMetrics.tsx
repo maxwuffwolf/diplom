@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { PayloadSize, RenderMode } from '@/lib/benchmark'
+import { estimateTti, type PayloadSize, type RenderMode } from '@/lib/benchmark'
 
 type Metrics = {
   ttfb: number
@@ -38,11 +38,6 @@ function recordToStorage(record: Record<string, string | number>) {
 
 function round(value: number) {
   return Number(value.toFixed(2))
-}
-
-function estimateTti(fcp: number, lastLongTaskEnd: number) {
-  if (!fcp) return 0
-  return round(Math.max(fcp, lastLongTaskEnd) + 5000)
 }
 
 export function RuntimeMetrics({

@@ -4,7 +4,7 @@ import { RuntimeMetrics } from '@/components/benchmark/RuntimeMetrics'
 import { ScenarioNav } from '@/components/benchmark/ScenarioNav'
 import {
   generateDataset,
-  SIMULATED_NETWORK_DELAY_MS,
+  SIMULATED_API_DELAY_MS,
   wait,
   type PayloadSize,
 } from '@/lib/benchmark'
@@ -23,7 +23,7 @@ export default async function SsrPage({
   const { size } = await params
   if (!SIZES.includes(size as PayloadSize)) notFound()
 
-  await wait(SIMULATED_NETWORK_DELAY_MS)
+  await wait(SIMULATED_API_DELAY_MS)
   const payload = generateDataset(size as PayloadSize)
   const query = await searchParams
 
